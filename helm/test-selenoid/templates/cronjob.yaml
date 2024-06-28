@@ -28,9 +28,9 @@ spec:
             - name: test
               image: "{{ .Values.images.test.repository }}:{{ .Values.images.test.tag | default .Chart.AppVersion }}"
               imagePullPolicy: {{ .Values.images.test.pullPolicy }}
-              {{ if .Values.test.env }}
+              {{ if .Values.global.env }}
               env:
-              {{- range $k, $v := .Values.test.env }}
+              {{- range $k, $v := .Values.global.env }}
                 - name: {{ $k }}
                   value: {{ $v }}
               {{- end }}

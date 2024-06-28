@@ -13,9 +13,6 @@ images:
     repository: docker.io/docker
     tag: 20-dind
     pullPolicy: Always
-test:
-  env:
-    APP_URL: https://nginx.badhouseplants.net
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
