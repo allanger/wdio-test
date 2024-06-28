@@ -12,9 +12,9 @@ This is still pretty raw, but I hope it's enough for understanding what I was tr
 
 ## Idea
 
-Let's pretend that our application is nginx and we want to run e2e tests againse its default page. You should be able to find it here: https://nginx.badhouseplants.net
+Let's pretend that our application is nginx and we want to run e2e tests of its default page. You should be able to find it here: https://nginx.badhouseplants.net
 
-In this example everything is packaged in Helm, but it can also be Kustomize, it's not the most important part. 
+In this example, everything is packaged in Helm, but it can also be Kustomize, it's not the most important part. 
 
 In the `./helm/test-selenoid` there is a helm chart test-selenoid, it's a cronjob that contains 3 containers:
 
@@ -30,7 +30,7 @@ And even though it's mostly related to helm, I guess it also might be transfered
 
 After this application is deployed, e2e tests will be automatically executed by a cronjob.
 
-Then the only thing that's missing is manual test run. It can be done by creating a job from a cronjob
+Then the only thing that's missing is a manual test run. It can be done by creating a job from a cronjob
 
 ```shell
 # -- Kubectl example 
@@ -41,4 +41,4 @@ And it would mean that we can create this job from code without managing k8s res
 
 Why do I think it's better than creating resource directly from Java code. Because after all the team that is mostly responsible for K8s doesn't write JAVA code, and when something is failed in k8s, DevOps are usually asked first. That would mean that DevOps might have to go to k8s, find the failed job, and try to figure out where it's coming from. And the path to the Java project will be very long, but even after the reason is found, it would mean that somebody has to fix this issue in the code, release a new version and only then the issue could be gone.
 
-With this approach it could just be a new release of an gitops setup that can be tracked from the argocd.
+With this approach it could just be a new release of an gitops setup that can be tracked from the argocd. That doesn't require builds, that would make it a way faster, and it can be done by one team, that also would make it faster and would untighten the cross-team dependency.
