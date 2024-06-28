@@ -1,0 +1,15 @@
+FROM node
+
+WORKDIR /src
+
+COPY package.json .
+COPY package-lock.json .
+RUN yarn install
+
+COPY test test
+COPY wdio.conf.js .
+COPY run.sh .
+
+CMD ["sh", "run.sh"]
+
+

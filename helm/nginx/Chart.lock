@@ -1,0 +1,6 @@
+dependencies:
+- name: test-selenoid
+  repository: file://../test-selenoid
+  version: 0.1.0
+digest: sha256:77a7ba0ce0c4d90c4b2a0264811d6b4eed559016b458842d31d0c3abdc0ac109
+generated: "2024-06-28T14:58:02.91470127+02:00"

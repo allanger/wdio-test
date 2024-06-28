@@ -1,0 +1,132 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "test-selenoid.fullname" . }}
+  labels:
+    {{- include "test-selenoid.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.schedule | quote }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          {{- with .Values.podAnnotations }}
+          annotations:
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
+          labels:
+            {{- include "test-selenoid.labels" . | nindent 12 }}
+        spec:
+          restartPolicy: OnFailure
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          containers:
+            - name: test
+              image: "{{ .Values.images.test.repository }}:{{ .Values.images.test.tag | default .Chart.AppVersion }}"
+              imagePullPolicy: {{ .Values.images.test.pullPolicy }}
+              {{ if .Values.test.env }}
+              env:
+              {{- range $k, $v := .Values.test.env }}
+                - name: {{ $k }}
+                  value: {{ $v }}
+              {{- end }}
+              {{- end }}
+          initContainers:
+            - name: 01-dind
+              restartPolicy: Always
+              image: "{{ .Values.images.dind.repository }}:{{ .Values.images.dind.tag }}"
+              imagePullPolicy: {{ .Values.images.dind.pullPolicy }}
+              command: 
+              {{- range .Values.dind.command }}
+                - {{ . }}
+              {{- end }}
+              args:
+              {{- range .Values.dind.commandArgs }}
+                - {{ . }}
+              {{- end }}
+              {{- with .Values.dind.securityContext }}
+              securityContext:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+              lifecycle:
+                preStop:
+                  # wait for all running containers to have stopped, so the last build can finish before the runner is fully stopped.
+                  exec:
+                    command: ["/bin/sh","-c","while true; do sleep {{ .Values.dind.gracefulShutdownRetryPeriod }}; lastEventTime=$(docker -H tcp://localhost:2375 events --since={{ .Values.dind.gracefulShutdownRetryPeriod }}s --until=1s | wc -l); containersRunning=$(docker -H tcp://localhost:2375 ps -q | wc -l); if [ $containersRunning -eq 0 ]  && [ $lastEventTime -eq 0 ]; then exit 0; fi; echo 'steps/containers running, retry'; done"]
+              livenessProbe:
+                exec:
+                  command:
+                  - docker
+                  - -H 
+                  - tcp://localhost:2375
+                  - images
+                initialDelaySeconds: 5
+                periodSeconds: 5
+              readinessProbe:
+                exec:
+                  command:
+                  - docker
+                  - -H 
+                  - tcp://localhost:2375
+                  - images
+                initialDelaySeconds: 5
+                periodSeconds: 5
+              {{- with .Values.dind.resources }}
+              resources:
+                {{- toYaml . | nindent 12 }}
+              {{- end }}
+              {{- with .Values.dind.extraVolumeMounts }}
+              volumeMounts:
+                {{- toYaml . | nindent 12 }}
+              {{- end }}
+            - name: 02-selenoid 
+              restartPolicy: Always
+              securityContext:
+                {{- toYaml .Values.securityContext | nindent 16 }}
+              image: "{{ .Values.images.selenoid.repository }}:{{ .Values.images.selenoid.tag }}"
+              imagePullPolicy: {{ .Values.images.selenoid.pullPolicy }}
+              livenessProbe:
+                {{- toYaml .Values.selenoid.livenessProbe | nindent 16 }}
+              readinessProbe:
+                {{- toYaml .Values.selenoid.readinessProbe | nindent 16 }}
+              resources:
+                {{- toYaml .Values.selenoid.resources | nindent 16 }}
+              volumeMounts:
+                - name: config
+                  mountPath: /etc/selenoid/browsers.json
+                  subPath: browsers.json
+                - name: config
+                  mountPath: /tmp/scripts/selenoid
+                  subPath: selenoid
+              command:
+                - sh
+              args:
+                - /tmp/scripts/selenoid
+              ports:
+                - containerPort: 4444
+                  name: selenium
+              env:
+                - name: DOCKER_HOST
+                  value: tcp://localhost:2375
+          volumes:
+            - name: config
+              configMap:   
+                name: {{ include "test-selenoid.fullname" . }}
+            - name: docker-storage
+              emptyDir: {}
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
+          {{- with .Values.affinity }}
+          affinity:
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
+          {{- with .Values.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
